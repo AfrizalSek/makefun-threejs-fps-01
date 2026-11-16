@@ -3,7 +3,7 @@
 const COPY = {
   start: {
     title: 'Greybox Range',
-    copy: 'A plain room, one rifle and four targets. Click to play.',
+    copy: '5v5 round-based tactical FPS. Plant the bomb at A or B, or clear the enemy team. First to 5 rounds.',
     action: 'Click to play',
   },
   paused: {

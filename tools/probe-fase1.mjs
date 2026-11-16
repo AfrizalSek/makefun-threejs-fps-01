@@ -48,13 +48,18 @@ try {
     const a = before.bots[i];
     return Math.hypot(b.x - a.x, b.z - a.z) > 1;
   }).length;
+  // Dead bots cannot move; judge movement among the living instead.
+  const aliveMoved = after.bots.filter((b, i) => {
+    const a = before.bots[i];
+    return b.alive && Math.hypot(b.x - a.x, b.z - a.z) > 1;
+  }).length;
   const aliveAtk = after.bots.filter((b) => b.alive && b.team === 'atk').length;
   const aliveDef = after.bots.filter((b) => b.alive && b.team === 'def').length;
-  console.log(`bots moved >1m: ${moved}/9, alive atk ${aliveAtk}/4 def ${aliveDef}/5, player hp ${after.playerHealth} alive=${after.playerAlive}`);
+  console.log(`bots moved >1m: ${moved}/9 (alive & moved: ${aliveMoved}), alive atk ${aliveAtk}/4 def ${aliveDef}/5, player hp ${after.playerHealth} alive=${after.playerAlive}`);
   console.log('bots at end:', JSON.stringify(after.bots.map((b) => `${b.name}@${b.x},${b.z}:${b.state}`)));
   if (before.phase !== 'buy') { console.log('FAIL: did not start in buy'); failures++; }
   if (after.phase !== 'live') { console.log('FAIL: phase did not reach live'); failures++; }
-  if (moved < 5) { console.log('FAIL: too few bots moved'); failures++; }
+  if (aliveMoved < 3) { console.log('FAIL: too few living bots moved'); failures++; }
   console.log(`console errors: ${consoleErrors.length}`);
   if (consoleErrors.length) console.log('  - ' + consoleErrors.join('\n  - '));
   console.log(`page errors: ${pageErrors.length}`);

@@ -222,15 +222,18 @@ export function createWorld(scene) {
   box(1.4, 1.2, 1.2, -14, 0.6, -12.8, 'wood');
 
   // Cover: crates (1.1 m crouch cover), half walls, barrels, lane pillars.
+  // Crates sit OFF the waypoint lane lines (x = 0, ±16): a prop dead-centre
+  // on a lane traps a bot walking straight at it — axis-separated collision
+  // with no lateral wish component cannot slide around it.
   const crates = [
-    [-16, 0], [-8, 8], [8, 8], [-4, -6], [4, -6],
-    [-16, -10], [16, -10], [0, 14], [-6, -14], [6, -14],
+    [-14, 0], [-8, 8], [8, 8], [-4, -6], [4, -6],
+    [-14, -10], [14, -10], [2, 14], [-6, -14], [6, -14],
   ];
   for (const [x, z] of crates) box(1.1, 1.1, 1.1, x, 0.55, z, 'wood');
   box(3.6, 1.2, 0.5, -4, 0.6, 6, 'wall');
   box(3.6, 1.2, 0.5, 4, 0.6, 6, 'wall');
-  box(2.4, 1.2, 0.5, -16, 0.6, -1, 'wall');
-  box(2.4, 1.2, 0.5, 16, 0.6, -1, 'wall');
+  box(2.4, 1.2, 0.5, -13.8, 0.6, -1, 'wall');
+  box(2.4, 1.2, 0.5, 13.8, 0.6, -1, 'wall');
   box(1.2, 3.2, 1.2, 0, 1.6, -6, 'wall');
   box(1.2, 3.2, 1.2, -8, 1.6, 12, 'wall');
   box(1.2, 3.2, 1.2, 8, 1.6, 12, 'wall');

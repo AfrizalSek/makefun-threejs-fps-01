@@ -45,19 +45,6 @@ function inSmoke(x1, z1, x2, z2, clouds) {
   return false;
 }
 
-function nearestWaypoint(x, z) {
-  let best = 0;
-  let bestDist = Infinity;
-  for (let i = 0; i < WAYPOINTS.length; i += 1) {
-    const d = Math.hypot(WAYPOINTS[i].x - x, WAYPOINTS[i].z - z);
-    if (d < bestDist) {
-      bestDist = d;
-      best = i;
-    }
-  }
-  return best;
-}
-
 function bfsPath(adj, from, to) {
   if (from === to) return [to];
   const prev = new Array(adj.length).fill(-1);
@@ -280,27 +267,74 @@ export function createBots(scene, world, options = {}) {
     } else {
       if (bot.health < 35) {
         bot.state = 'retreat';
-        if (!bot.path.length || bot.path[bot.path.length - 1] !== (bot.team === 'atk' ? 0 : 19)) {
-          setPath(bot, bot.team === 'atk' ? 0 : 19);
+        const home = bot.team === 'atk' ? 0 : 19;
+        if (!bot.path.length || bot.path[bot.path.length - 1] !== home) {
+          setPath(bot, home);
+        }
+        // Heal at home: a retreated bot recovers and pushes again instead
+        // of camping spawn at low health for the rest of the round.
+        const homeNode = waypoints[home];
+        if (Math.hypot(homeNode.x - pos.x, homeNode.z - pos.z) < 1.5) {
+          bot.health = Math.min(100, bot.health + 20 * dt);
         }
       } else if (bot.team === 'atk') {
         bot.state = 'patrol';
-        const goal = siteGoal();
+        // A dropped bomb outranks the site: someone must pick it up.
+        const goal = ctx.droppedBomb
+          ? nearestWaypoint(ctx.droppedBomb.x, ctx.droppedBomb.z)
+          : siteGoal();
         if (!bot.path.length || bot.path[bot.path.length - 1] !== goal) setPath(bot, goal);
       } else {
         bot.state = 'hold';
-        if (!bot.path.length || bot.path[bot.path.length - 1] !== bot.holdNode) setPath(bot, bot.holdNode);
+        // When the bomb is planted, defenders abandon their hold and converge
+        // on it so the defuse can actually happen.
+        const dest = ctx.plantedBomb
+          ? nearestWaypoint(ctx.plantedBomb.x, ctx.plantedBomb.z)
+          : bot.holdNode;
+        if (!bot.path.length || bot.path[bot.path.length - 1] !== dest) setPath(bot, dest);
+      }
+      // Unstuck: if we have somewhere to go but barely moved in the last
+      // second, sidestep perpendicular for a short burst instead of pushing
+      // into the same obstacle forever.
+      if (!bot.stuck) bot.stuck = { x: pos.x, z: pos.z, t: 0, side: 0, sideLeft: 0 };
+      const st = bot.stuck;
+      st.t += dt;
+      if (st.t >= 1) {
+        const moved = Math.hypot(pos.x - st.x, pos.z - st.z);
+        if (bot.path.length && moved < 0.15) {
+          st.side = random() < 0.5 ? -1 : 1;
+          st.sideLeft = 0.7;
+        }
+        st.x = pos.x;
+        st.z = pos.z;
+        st.t = 0;
       }
       const node = waypoints[bot.path[Math.min(bot.pathIndex, bot.path.length - 1)]];
       if (node) {
-        const dx = node.x - pos.x;
-        const dz = node.z - pos.z;
+        let dx = node.x - pos.x;
+        let dz = node.z - pos.z;
+        // Close to a dropped bomb: walk the last metres to the bomb itself —
+        // the nearest waypoint can sit metres away from it, and the pickup
+        // radius would never trigger from the waypoint.
+        if (ctx.droppedBomb && bot.team === 'atk') {
+          const bdx = ctx.droppedBomb.x - pos.x;
+          const bdz = ctx.droppedBomb.z - pos.z;
+          if (Math.hypot(bdx, bdz) < 4) {
+            dx = bdx;
+            dz = bdz;
+          }
+        }
         const dist = Math.hypot(dx, dz);
         if (dist < 0.6) {
           bot.pathIndex += 1;
         } else {
           const jump = node.y > pos.y + 0.3;
-          mover.step(dt, dx / dist, dz / dist, jump);
+          if (st.sideLeft > 0) {
+            st.sideLeft -= dt;
+            mover.step(dt, (-dz / dist) * st.side, (dx / dist) * st.side, false);
+          } else {
+            mover.step(dt, dx / dist, dz / dist, jump);
+          }
           bot.yaw = Math.atan2(-dx, -dz);
         }
       } else {

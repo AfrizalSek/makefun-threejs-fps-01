@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { createBots } from './bots.js';
 import { createRounds } from './rounds.js';
 import { createEconomy, KILL_BONUS, PLANT_BONUS } from './economy.js';
-import { createWeapon } from './weapon.js';
+import { createWeapon } from './weapons.js';
 import { createGrenades } from './grenades.js';
 import { createWorld } from './world.js';
 import { createHud } from './hud.js';
@@ -273,6 +273,7 @@ function step(dt) {
   }
   weapon.step(dt);
   grenades.step(dt, { time: elapsed });
+  const bomb = rounds.state.bomb;
   bots.step(dt, {
     time: elapsed,
     phase,
@@ -280,6 +281,8 @@ function step(dt) {
     playerAlive,
     playerSpeed: player.groundSpeed(),
     smokeClouds: grenades.clouds,
+    plantedBomb: bomb.status === 'planted' ? { x: bomb.x, z: bomb.z } : null,
+    droppedBomb: bomb.status === 'dropped' ? { x: bomb.x, z: bomb.z } : null,
     throwFrag(bot, targetPos) {
       const from = bot.mover.state.position.clone();
       from.y += 1.4;
@@ -293,7 +296,6 @@ function step(dt) {
   });
 
   // Bomb: pickup, plant, defuse.
-  const bomb = rounds.state.bomb;
   if (bomb.status === 'dropped') {
     if (playerAlive && Math.hypot(body.position.x - bomb.x, body.position.z - bomb.z) < 1.2) {
       rounds.setCarrier('YOU');
@@ -499,9 +501,15 @@ window.addEventListener('resize', () => {
 // Debug handle for the Playwright harness only: read-only game state.
 window.__dustline = {
   rounds: rounds.state,
+  roundsApi: rounds,
   bots: bots.bots,
+  botsApi: bots,
   economy,
   weapon,
+  grenades,
+  get playerPos() {
+    return body.position;
+  },
   get playerHealth() {
     return playerHealth;
   },

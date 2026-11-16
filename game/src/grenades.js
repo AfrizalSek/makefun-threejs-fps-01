@@ -82,6 +82,7 @@ export function createGrenades(scene, world, options = {}) {
 
   return {
     clouds,
+    projectiles,
     throwFrom(origin, direction, type, owner) {
       const mesh = new THREE.Mesh(
         ballGeo,
