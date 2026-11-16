@@ -16,6 +16,7 @@ export function createRounds(options = {}) {
   const onMatchEnd = options.onMatchEnd ?? (() => {});
 
   const stats = new Map();
+  let roster = [];
   const state = {
     phase: 'buy',
     phaseLeft: BUY_SECONDS,
@@ -126,8 +127,13 @@ export function createRounds(options = {}) {
         bomb.defuseProgress = Math.max(0, bomb.defuseProgress - dt / 5);
       }
     },
+    setRoster(names) {
+      roster = names;
+      for (const name of names) stat(name);
+    },
     start() {
       stats.clear();
+      for (const name of roster) stat(name);
       state.round = 1;
       state.scoreAtk = 0;
       state.scoreDef = 0;
